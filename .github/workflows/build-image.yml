@@ -78,13 +78,22 @@ jobs:
           fi
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
     needs: detect-changes
     if: needs.detect-changes.outputs.detected == 'true'
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true # for shunit2
+
+      - name: Determine architecture
+        id: arch
+        run: |
+          ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')"
+          echo "ARCH=$ARCH" >> $GITHUB_ENV
 
       - name: Build image
         run: |
@@ -105,7 +114,7 @@ jobs:
       - name: Upload image as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.tag }}
+          name: ${{ inputs.tag }}-${{ env.ARCH }}
           path: "${{ inputs.tag }}.tar"
           retention-days: 1
 
